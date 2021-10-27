@@ -1,0 +1,55 @@
+{
+    "title": "System is resilient to backend failures",
+    "description": "Can our frontend service gracefully a backend failure?",
+    "tags": [
+        "service",
+        "kubernetes",
+        "spring"
+    ],
+    "steady-state-hypothesis": {
+        "title": "Services are all available and healthy",
+        "probes": [
+            {
+                "type": "probe",
+                "name": "all-services-are-healthy",
+                "tolerance": true,
+                "provider": {
+                    "type": "python",
+                    "module": "chaosk8s.probes",
+                    "func": "all_pods_healthy"
+                }
+            },
+            {
+                "type": "probe",
+                "name": "front-service-must-still-respond",
+                "tolerance": 200,
+                "provider": {
+                    "type": "http",
+                    "url": "http://<your frontend Extarnal IP>/"
+                }
+            }
+        ]
+    },
+    "method": [
+        {
+            "type": "action",
+            "name": "stop-frontend-pod",
+            "provider": {
+                "type": "python",
+                "module": "chaosk8s.pod.actions",
+                "func": "delete_pods",
+                "arguments": {
+                    "name": "front"
+                }
+            },
+            "pauses": {
+                "after": 10
+            }
+        },
+        {
+            "type": "probe",
+            "ref": "all-services-are-healthy"
+        }
+    ],
+    "rollbacks": []
+}
